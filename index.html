@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FocusSphere PoC</title>
+    <style>
+        body { font-family: sans-serif; margin: 2em; background-color: #f4f4f9; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 2em; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1, h2 { color: #333; }
+        .section { border: 1px solid #ddd; padding: 1em; margin-bottom: 1em; border-radius: 5px; }
+        input { width: 95%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 15px; border: none; background-color: #007bff; color: white; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        pre { background-color: #eee; padding: 1em; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>FocusSphere Proof of Concept</h1>
+    
+    <div id="auth-section" class="section">
+        <h2>1. Authentication</h2>
+        <form id="register-form">
+            <h3>Register</h3>
+            <input type="text" id="reg-name" placeholder="Name" required>
+            <input type="email" id="reg-email" placeholder="Email" required>
+            <input type="password" id="reg-password" placeholder="Password" required>
+            <button type="submit">Register</button>
+        </form>
+        <hr>
+        <form id="login-form">
+            <h3>Login</h3>
+            <input type="email" id="login-email" placeholder="Email" required>
+            <input type="password" id="login-password" placeholder="Password" required>
+            <button type="submit">Login</button>
+        </form>
+    </div>
+
+    <div id="dashboard-section" class="section hidden">
+        <h2>2. Set Your Status & Find a Match</h2>
+        <p>Welcome! You are logged in.</p>
+        <form id="status-form">
+            <h3>Set Study Goal</h3>
+            <input type="text" id="study-goal" placeholder="Enter your study goal..." required>
+            <button type="submit">Set Status to "Searching"</button>
+        </form>
+        <hr>
+        <button id="find-match-btn">Find a Match!</button>
+    </div>
+
+    <div class="section">
+        <h2>API Results</h2>
+        <pre id="results">API responses will appear here...</pre>
+    </div>
+</div>
+
+<script>
+    const API_BASE_URL = 'http://127.0.0.1:5000';
+    let authToken = null;
+
+    const registerForm = document.getElementById('register-form');
+    const loginForm = document.getElementById('login-form');
+    const statusForm = document.getElementById('status-form');
+    const findMatchBtn = document.getElementById('find-match-btn');
+    
+    const resultsEl = document.getElementById('results');
+    const authSection = document.getElementById('auth-section');
+    const dashboardSection = document.getElementById('dashboard-section');
+
+    // --- Event Listeners ---
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('reg-name').value;
+        const email = document.getElementById('reg-email').value;
+        const password = document.getElementById('reg-password').value;
+        
+        const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ name, email, password })
+        });
+        const data = await response.json();
+        resultsEl.textContent = JSON.stringify(data, null, 2);
+    });
+
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        
+        const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ email, password })
+        });
+        const data = await response.json();
+        resultsEl.textContent = JSON.stringify(data, null, 2);
+
+        if (data.token) {
+            authToken = data.token;
+            authSection.classList.add('hidden');
+            dashboardSection.classList.remove('hidden');
+        }
+    });
+
+    statusForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const study_goal = document.getElementById('study-goal').value;
+
+        const response = await fetch(`${API_BASE_URL}/api/users/me/status`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ status: 'searching', study_goal })
+        });
+        const data = await response.json();
+        resultsEl.textContent = JSON.stringify(data, null, 2);
+    });
+
+    findMatchBtn.addEventListener('click', async () => {
+        const response = await fetch(`${API_BASE_URL}/api/match/find`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        const data = await response.json();
+        resultsEl.textContent = JSON.stringify(data, null, 2);
+    });
+</script>
+</body>
+</html>
